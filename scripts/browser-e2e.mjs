@@ -11,8 +11,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const APP = join(dirname(fileURLToPath(import.meta.url)), "..");
-const PW = process.env.PLAYWRIGHT_CORE ?? "/home/a/.npm/_npx/a1722018f28f9df2/node_modules/playwright-core/index.mjs";
-const CHROME = process.env.CHROME ?? "/home/a/.cache/ms-playwright/chromium-1194/chrome-linux/chrome";
+const PW = process.env.PLAYWRIGHT_CORE ?? "playwright-core";
+const CHROME = process.env.CHROME; // unset: Playwright's own Chromium
 const { chromium } = await import(PW);
 const PORT = 8798;
 const BASE = `http://127.0.0.1:${PORT}`;

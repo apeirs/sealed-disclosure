@@ -139,7 +139,7 @@ Every write is simulated before anything is signed for the chain, so a bad signa
 
 ```sh
 npx tsx scripts/e2e-negative.ts keys/project.mnemonic keys/reporter.mnemonic keys/copier.mnemonic
-node scripts/browser-e2e.mjs        # needs a Chromium for playwright-core; set CHROME=/path/to/chrome
+node scripts/browser-e2e.mjs        # needs playwright-core (PLAYWRIGHT_CORE=/path/to/it) and a Chromium (CHROME=...)
 ```
 
 `e2e-negative.ts` runs 17 checks as `eth_call` simulations, so they cost nothing: the contract's statements match
