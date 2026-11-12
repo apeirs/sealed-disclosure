@@ -180,6 +180,7 @@ inbox in the page; then it checks the `?inbox=demo&key=demo` and `?project=demo`
 ```sh
 ./deploy.sh --dry-run          # tests, build, secret check, Worker bundle; nothing uploaded
 ./deploy.sh --with-demo-key    # deploy to Cloudflare Workers (needs `npx wrangler login`)
+BASE=https://sealed-disclosure.apeir.workers.dev node scripts/browser-e2e.mjs --no-drop   # browser checks on the deployed copy
 ```
 
 One Cloudflare Worker serves the built app and the same GET-only gateway ([`worker/index.mjs`](worker/index.mjs),

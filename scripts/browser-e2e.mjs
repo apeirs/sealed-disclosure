@@ -3,7 +3,8 @@
 //   2. Drop that browser-sealed envelope with the CLI (the reporter's key signs; optional: --no-drop).
 //   3. Inbox: list the demo project's drops, load its seal key, open every drop in the page.
 //   4. Deep links: ?inbox=demo&key=demo opens the inbox with the demo seal key, ?project=demo runs the checks.
-// Screenshots go to docs/screenshots/ (or $SHOTS). Needs `npm run build` first.
+// Screenshots go to docs/screenshots/ (or $SHOTS). Needs `npm run build` first, unless $BASE points at a
+// deployed copy (then no local server is started), e.g. BASE=https://sealed-disclosure.apeir.workers.dev.
 //
 //   node scripts/browser-e2e.mjs [--no-drop]
 import { spawn, spawnSync } from "node:child_process";
@@ -16,7 +17,7 @@ const PW = process.env.PLAYWRIGHT_CORE ?? "playwright-core";
 const CHROME = process.env.CHROME; // unset: Playwright's own Chromium
 const { chromium } = await import(PW);
 const PORT = 8798;
-const BASE = `http://127.0.0.1:${PORT}`;
+const BASE = process.env.BASE?.replace(/\/$/, "") ?? `http://127.0.0.1:${PORT}`;
 const DEMO = "qor1knxej2kffzpx9hcfjd54argxj72vs962nw60fg";
 const REPORTER = "qor1uss0ahjc6kgygjmgamsqrmppnpdvd5u7vrlqa5";
 const SHOTS = process.env.SHOTS ?? join(APP, "docs/screenshots");
@@ -31,7 +32,9 @@ const check = (ok, label) => {
   console.log(`${ok ? "PASS" : "FAIL"}  ${label}`);
 };
 
-const server = spawn("node", ["server.mjs"], { cwd: APP, env: { ...process.env, PORT: String(PORT) }, stdio: "ignore" });
+const server = process.env.BASE
+  ? undefined
+  : spawn("node", ["server.mjs"], { cwd: APP, env: { ...process.env, PORT: String(PORT) }, stdio: "ignore" });
 const browser = await chromium.launch({ executablePath: CHROME, headless: true });
 try {
   for (let i = 0; i < 40; i++) {
@@ -107,7 +110,7 @@ try {
   check(errors.length === 0, `no page errors${errors.length ? ": " + errors.join(" | ") : ""}`);
 } finally {
   await browser.close();
-  server.kill();
+  server?.kill();
 }
 console.log(failures ? `\n${failures} check(s) failed.` : "\nAll browser checks passed.");
 process.exitCode = failures ? 1 : 0;
