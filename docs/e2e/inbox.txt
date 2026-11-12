@@ -1,0 +1,24 @@
+3 drop(s) for qor1knxej2kffzpx9hcfjd54argxj72vs962nw60fg.
+
+#0  from qor1uss0ahjc6kgygjmgamsqrmppnpdvd5u7vrlqa5  block 9965818 (2026-11-12T17:58:00.000Z)  2245 bytes  tx 0x915ef838efdaeee4749fa70764dc7385da2f93bebc51b57dedc59dd21c3c1aa4
+    envelope SHA-256 0xf60289c1297a1dfe297a965f914ed71f01e4068525133b1a6ecde60acecd3f4a  acknowledged in block 9965833
+    opened; the sender named on chain is the one it was sealed by.
+    [HIGH] Reentrancy in ExampleVault.withdraw  (written 2026-11-12T17:57:48Z)
+    contact: reply via this inbox
+    | Component: ExampleVault.withdraw (testnet demo contract)
+    | Steps: call withdraw(amount) twice in one block from a contract whose receive() re-enters.
+    | Impact: the second call reads the balance before the first one is written, so a holder can take twice their deposit.
+    | Fix: move the balance write above the external call (checks-effects-interactions) or add a reentrancy guard.
+
+#1  from qor1678npj39yjmfeamjeapgju3uxxrtdjzn0gqehw  block 9965899 (2026-11-12T17:59:55.000Z)  2245 bytes  tx 0x5666716a8be51fdca5a8f9b22803561ed403faaf1e0ae89ac9422fad38b2f63e
+    envelope SHA-256 0xf60289c1297a1dfe297a965f914ed71f01e4068525133b1a6ecde60acecd3f4a  not acknowledged
+    could not open: Does not open under this reporter's name: the envelope was sealed for another sender (a copied drop) or altered.
+
+#2  from qor1uss0ahjc6kgygjmgamsqrmppnpdvd5u7vrlqa5  block 9966072 (2026-11-12T18:04:02.000Z)  2087 bytes  tx 0x7a4dbef7ad85c22aa6eb760b4fd6389b3b6a496152b07c1dee03ad7464fb2d73
+    envelope SHA-256 0x5072e781bcf3317d5260777f02f7c90833f722dcea7230c824eb8aec3f5b056b  not acknowledged
+    opened; the sender named on chain is the one it was sealed by.
+    [MEDIUM] Unchecked return value in Treasury.release  (written 2026-11-12T18:03:55Z)
+    contact: this inbox
+    | Treasury.release ignores the bool returned by token.transfer.
+    | A token that returns false instead of reverting marks the payment done without moving funds.
+    | Fix: require the return value, or use a safe-transfer wrapper.

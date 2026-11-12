@@ -1,0 +1,33 @@
+npm notice run sealed-disclosure@0.1.0 test
+npm notice run tsx --test test/*.test.ts
+▶ statements
+  ✔ dropText has the contract's exact shape (1.303608ms)
+  ✔ receiptText names the drop id in decimal (1.224351ms)
+  ✔ AAD binds sender and recipient (0.468268ms)
+✔ statements (531.282319ms)
+▶ reports
+  ✔ round-trips and trims (2.617476ms)
+  ✔ rejects missing fields and unknown severities (1.216453ms)
+✔ reports (4.498375ms)
+▶ keys and cards
+  ✔ QoreSign and the SDK agree on every derived key (asserted in loadAccount) (0.561686ms)
+  ✔ a card survives the trip through publishCard arguments and verifies (49.407052ms)
+  ✔ a card does not verify against another account's keys (31.561604ms)
+  ✔ cardFromChain refuses non-canonical text (19.731467ms)
+  ✔ the seal-key file reproduces the keys and nothing else (6.134085ms)
+✔ keys and cards (109.318974ms)
+▶ seal and open
+  ✔ only the recipient opens it, and only under the true sender (112.714059ms)
+  ✔ an optional copy to the reporter opens for both (157.365633ms)
+  ✔ refuses to seal to a project that failed its checks (3.123521ms)
+  ✔ an envelope sealed for another chain does not open here (46.819702ms)
+✔ seal and open (322.66663ms)
+✔ generateMnemonic gives 24 words (1.837882ms)
+ℹ tests 15
+ℹ suites 4
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3548.925788

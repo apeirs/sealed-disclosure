@@ -1,0 +1,16 @@
+PASS  demo project: 3 of 3 key checks pass in the browser
+PASS  browser sealed and downloaded report-5072e781.sealed (2087 bytes)
+      ML-DSA-87 key already registered.
+      drop: the inbox accepts it in simulation.
+      Opened a scoped EVM window (hybrid-signed): CB8774F6BBCE5728E30BD89299BF24D9CDAD3C7E3741BA36B39FD609A40B83E7 (1 tx, 200 blocks, 0.188031 QOR max, only 0x56b6706d009db5357ee076e62c7c7e317e45c353)
+      drop tx: 0x7a4dbef7ad85c22aa6eb760b4fd6389b3b6a496152b07c1dee03ad7464fb2d73
+      Dropped as #2 in block 9966072 (563170 gas).
+PASS  CLI dropped the browser-sealed envelope
+PASS  inbox lists 3 drops
+      Seal key for qor1knxe…nw60fg loaded in memory only. Opened 2 of 3.
+PASS  drop #0 (sealed by the CLI) opens in the browser
+PASS  the browser-sealed drop opens in the browser
+PASS  the copied envelope (#1) is refused (1 refused)
+PASS  no page errors
+
+All browser checks passed.

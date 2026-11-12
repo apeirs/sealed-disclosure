@@ -1,0 +1,21 @@
+Inbox 0x56b6706d009db5357ee076e62c7c7e317e45c353, project qor1knxej2kffzpx9hcfjd54argxj72vs962nw60fg, 3 drop(s).
+
+PASS  dropText matches the contract: "Sealed Disclosure drop v1" (282 chars)
+PASS  receiptText matches the contract: 293 chars
+PASS  the same envelope dropped twice by its reporter: reverted with AlreadyDropped
+PASS  a drop signed over a different envelope: reverted with BadSignature
+PASS  a drop in the reporter's name signed by another key: reverted with BadSignature
+PASS  an empty envelope: reverted with EmptyEnvelope
+PASS  a drop from an address with no ML-DSA-87 key: reverted with NoPqcKey
+PASS  acknowledging the same drop again: reverted with AlreadyAcknowledged
+PASS  acknowledging #1 as someone other than the recipient: reverted with BadSignature
+PASS  acknowledging a drop that does not exist: reverted with UnknownDrop
+PASS  replaying an older recipient card: reverted with NotNewer
+PASS  a card for the project signed with someone else's ML-DSA key: reverted with BadSignature
+PASS  a card issued for another chain: reverted with BadCard
+PASS  a tampered envelope: The envelope does not match the digest on record.
+PASS  opening with keys that are not the recipient's: These keys are not among the envelope's recipients.
+PASS  the same envelope under another sender's name: Does not open under this reporter's name: the envelope was sealed for another sender (a copied drop) or altered.
+PASS  on-chain copy #1 by qor1678npj39yjmfeamjeapgju3uxxrtdjzn0gqehw: Does not open under this reporter's name: the envelope was sealed for another sender (a copied drop) or altered.
+
+All checks passed.

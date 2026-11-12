@@ -1,0 +1,30 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+*{box-sizing:border-box;margin:0}
+body{width:1280px;height:720px;overflow:hidden;font-family:"Inter","Segoe UI",system-ui,sans-serif;background:#0f1115;color:#e8eaee;position:relative}
+.l{position:absolute;left:64px;top:72px;width:560px}
+.tag{font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:#748ffc;font-weight:600}
+h1{font-size:68px;line-height:1.02;margin-top:18px;font-weight:750;letter-spacing:-.02em}
+p.sub{font-size:23px;line-height:1.4;color:#b7bdc8;margin-top:22px}
+ul{list-style:none;margin-top:34px;padding:0}
+li{display:flex;gap:14px;align-items:flex-start;font-size:19px;line-height:1.35;margin-bottom:16px;color:#d6dae1}
+li b{color:#fff}
+.k{flex:none;width:44px;height:30px;border-radius:8px;background:#1d2433;border:1px solid #33405e;color:#9fb1ff;font:600 12px/30px ui-monospace,monospace;text-align:center}
+.foot{position:absolute;left:64px;bottom:44px;font:15px ui-monospace,monospace;color:#7d8696}
+.r{position:absolute;right:-30px;top:60px;width:640px;height:600px;border-radius:14px;overflow:hidden;border:1px solid #2b303a;box-shadow:0 30px 80px rgba(0,0,0,.55);transform:perspective(1600px) rotateY(-8deg);background:#fff}
+.r img{width:960px;display:block;margin-top:-420px;margin-left:-150px}
+.glow{position:absolute;right:120px;top:-200px;width:700px;height:700px;background:radial-gradient(circle,rgba(116,143,252,.22),transparent 65%)}
+</style></head><body>
+<div class="glow"></div>
+<div class="l">
+<div class="tag">QoreChain &middot; Encrypted Apps</div>
+<h1>Sealed Disclosure</h1>
+<p class="sub">Report a vulnerability to any QoreChain project, sealed to its on-chain post-quantum key.</p>
+<ul>
+<li><span class="k">KEM</span><span><b>ML-KEM-1024 + X25519</b> envelopes only the project can open</span></li>
+<li><span class="k">DSA</span><span><b>ML-DSA-87</b> drop signatures checked on chain by the PQC precompile</span></li>
+<li><span class="k">#1</span><span><b>First report wins, provably</b>: copied envelopes don't open</span></li>
+</ul>
+</div>
+<div class="foot">SealedInbox 0x56b6…c353 &middot; live on Diana testnet</div>
+<div class="r"><img src="../screenshots/4-inbox-opened.png"></div>
+</body></html>
