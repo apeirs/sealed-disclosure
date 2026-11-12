@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Unit tests (statements, reports, cards, seal/open, refusals, gateway, Worker)
+        run: npm test
+      - name: Type-check and production build
+        run: npm run build
+      - name: SealedInbox artifact is the compiled contract source (solc 0.8.24, via-IR)
+        run: |
+          npm run compile:contracts
+          git diff --exit-code contracts/SealedInbox.artifact.ts
+      - name: No key material in the build or the tracked files
+        run: scripts/check-secrets.sh dist
+      - name: Bundle the Cloudflare Worker (dry run, nothing uploaded)
+        run: npx --yes wrangler@4.160.0 deploy --dry-run --outdir "$RUNNER_TEMP/worker"
+
+  # Reads public testnet state, so a testnet outage shows here without failing the build.
+  testnet:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: The live inbox on qorechain-diana runs exactly contracts/SealedInbox.sol
+        run: npm run verify:deployment
+      - name: The demo project can receive reports (ML-KEM-1024 key, ML-DSA-87 key, signed card)
+        run: npm run sd -- check qor1knxej2kffzpx9hcfjd54argxj72vs962nw60fg

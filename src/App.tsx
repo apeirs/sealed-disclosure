@@ -1,5 +1,5 @@
 import { sealKeysFromSeed, fromHex, type SealKeyPair } from "@qorechain/qoreseal";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { listDrops, openDrop, parseSealKeyFile, resolveProject, sealReport, type Check, type DropEntry, type Opened, type ProjectStatus, type Sealed } from "./core/inbox";
 import { browserNetwork } from "./core/networks";
 import { SEVERITIES, newReport, shortHex, type Severity } from "./core/protocol";
@@ -9,6 +9,39 @@ export const DEMO_PROJECT = "qor1knxej2kffzpx9hcfjd54argxj72vs962nw60fg";
 const DEMO_SEAL_KEY = "/demo-project.sealkey.json";
 
 type Tab = "report" | "inbox" | "how";
+
+/**
+ * Deep links, so a reviewer can land on a result in one click:
+ *   ?project=<qor1…|demo>          check a project (Send a report tab)
+ *   ?inbox=<qor1…|demo>[&key=demo] list an inbox, and open it with the demo seal key if this host serves it
+ */
+interface Link {
+  tab: Tab;
+  project?: string;
+  inbox?: string;
+  demoKey?: boolean;
+}
+
+function readLink(search: string): Link {
+  const q = new URLSearchParams(search);
+  const who = (v: string | null) => (v === "demo" ? DEMO_PROJECT : v?.trim() || undefined);
+  const inbox = who(q.get("inbox"));
+  if (inbox) return { tab: "inbox", inbox, demoKey: q.get("key") === "demo" };
+  const project = who(q.get("project"));
+  if (project) return { tab: "report", project };
+  const tab = q.get("tab");
+  return { tab: tab === "inbox" || tab === "how" ? tab : "report" };
+}
+
+/** Run `fn` once on mount (React strict mode mounts twice in dev). */
+function useOnce(fn: () => void) {
+  const done = useRef(false);
+  useEffect(() => {
+    if (done.current) return;
+    done.current = true;
+    fn();
+  }, []);
+}
 
 function errorText(err: unknown): string {
   const e = err as { shortMessage?: string; message?: string };
@@ -56,9 +89,9 @@ function download(name: string, bytes: Uint8Array) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function ReportTab() {
+function ReportTab({ initial }: { initial?: string }) {
   const net = useMemo(() => browserNetwork("testnet", location.origin), []);
-  const [project, setProject] = useState("");
+  const [project, setProject] = useState(initial ?? "");
   const [status, setStatus] = useState<ProjectStatus>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -82,6 +115,7 @@ function ReportTab() {
       setBusy(false);
     }
   }
+  useOnce(() => initial && check(initial));
 
   async function seal() {
     setError("");
@@ -208,23 +242,25 @@ function DropCard({ d, opened }: { d: DropEntry; opened?: Opened }) {
   );
 }
 
-function InboxTab() {
+function InboxTab({ initial, demoKey }: { initial?: string; demoKey?: boolean }) {
   const net = useMemo(() => browserNetwork("testnet", location.origin), []);
-  const [address, setAddress] = useState("");
+  const [address, setAddress] = useState(initial ?? "");
   const [drops, setDrops] = useState<DropEntry[]>();
   const [opened, setOpened] = useState<Record<string, Opened>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [keyNote, setKeyNote] = useState("");
 
-  async function load(a = address) {
+  async function load(a = address): Promise<DropEntry[] | undefined> {
     setBusy(true);
     setError("");
     setDrops(undefined);
     setOpened({});
     setKeyNote("");
     try {
-      setDrops(await listDrops(net, a));
+      const list = await listDrops(net, a);
+      setDrops(list);
+      return list;
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -232,22 +268,34 @@ function InboxTab() {
     }
   }
 
-  async function useKey(text: string) {
+  async function useKey(text: string, list = drops) {
     setError("");
     try {
       const f = parseSealKeyFile(text);
       if (f.chainId !== net.chainId) throw new Error(`This seal key is for ${f.chainId}, not ${net.chainId}.`);
-      if (drops?.length && drops[0].recipient !== f.address) throw new Error(`This seal key belongs to ${f.address}, not to this inbox.`);
+      if (list?.length && list[0].recipient !== f.address) throw new Error(`This seal key belongs to ${f.address}, not to this inbox.`);
       const keys: SealKeyPair = sealKeysFromSeed(fromHex(f.seed));
       const out: Record<string, Opened> = {};
-      for (const d of drops ?? []) out[d.id.toString()] = await openDrop(net.chainId, d, keys);
+      for (const d of list ?? []) out[d.id.toString()] = await openDrop(net.chainId, d, keys);
       setOpened(out);
       const n = Object.values(out).filter((o) => o.ok).length;
-      setKeyNote(`Seal key for ${shortHex(f.address, 6)} loaded in memory only. Opened ${n} of ${drops?.length ?? 0}.`);
+      setKeyNote(`Seal key for ${shortHex(f.address, 6)} loaded in memory only. Opened ${n} of ${list?.length ?? 0}.`);
     } catch (err) {
       setError(errorText(err));
     }
   }
+
+  async function useDemoKey(list = drops) {
+    const r = await fetch(DEMO_SEAL_KEY).catch(() => undefined);
+    if (!r?.ok) return setError("This deployment does not serve the demo seal key. Load a seal-key file instead.");
+    await useKey(await r.text(), list);
+  }
+
+  useOnce(async () => {
+    if (!initial) return;
+    const list = await load(initial);
+    if (demoKey && list?.[0]?.recipient === DEMO_PROJECT) await useDemoKey(list);
+  });
 
   return (
     <>
@@ -271,15 +319,7 @@ function InboxTab() {
                 <input type="file" accept=".json,application/json" onChange={async (e) => { const f = e.target.files?.[0]; if (f) await useKey(await f.text()); e.target.value = ""; }} />
               </label>
               {drops[0]?.recipient === DEMO_PROJECT && (
-                <button
-                  onClick={async () => {
-                    const r = await fetch(DEMO_SEAL_KEY).catch(() => undefined);
-                    if (!r?.ok) return setError("This deployment does not ship the demo seal key.");
-                    await useKey(await r.text());
-                  }}
-                >
-                  Use the demo seal key
-                </button>
+                <button onClick={() => useDemoKey()}>Use the demo seal key</button>
               )}
             </div>
           </div>
@@ -326,7 +366,10 @@ function HowTab() {
 }
 
 export function App() {
-  const [tab, setTab] = useState<Tab>("report");
+  const link = useMemo(() => readLink(location.search), []);
+  const [tab, setTab] = useState<Tab>(link.tab);
+  // A deep link acts once, on the tab it opened; switching tabs starts clean.
+  const [fresh, setFresh] = useState(true);
   const tabs: [Tab, string][] = [
     ["report", "Send a report"],
     ["inbox", "Inbox"],
@@ -343,13 +386,13 @@ export function App() {
       </header>
       <nav className="tabs" role="tablist">
         {tabs.map(([t, label]) => (
-          <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>
+          <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? "active" : ""} onClick={() => { setFresh(false); setTab(t); }}>
             {label}
           </button>
         ))}
       </nav>
-      {tab === "report" && <ReportTab />}
-      {tab === "inbox" && <InboxTab />}
+      {tab === "report" && <ReportTab initial={fresh ? link.project : undefined} />}
+      {tab === "inbox" && <InboxTab initial={fresh ? link.inbox : undefined} demoKey={fresh && link.demoKey} />}
       {tab === "how" && <HowTab />}
       <footer className="foot">
         Open source (MIT). Built with create-qorechain-dapp, @qorechain/sdk, QoreSign, QoreSeal and viem. Testnet only: do not send real

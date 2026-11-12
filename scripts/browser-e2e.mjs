@@ -2,7 +2,8 @@
 //   1. Send a report: check the demo project (3 checks), write a report, seal it in the page, download the envelope.
 //   2. Drop that browser-sealed envelope with the CLI (the reporter's key signs; optional: --no-drop).
 //   3. Inbox: list the demo project's drops, load its seal key, open every drop in the page.
-// Screenshots go to docs/screenshots/. Needs `npm run build` first.
+//   4. Deep links: ?inbox=demo&key=demo opens the inbox with the demo seal key, ?project=demo runs the checks.
+// Screenshots go to docs/screenshots/ (or $SHOTS). Needs `npm run build` first.
 //
 //   node scripts/browser-e2e.mjs [--no-drop]
 import { spawn, spawnSync } from "node:child_process";
@@ -18,7 +19,7 @@ const PORT = 8798;
 const BASE = `http://127.0.0.1:${PORT}`;
 const DEMO = "qor1knxej2kffzpx9hcfjd54argxj72vs962nw60fg";
 const REPORTER = "qor1uss0ahjc6kgygjmgamsqrmppnpdvd5u7vrlqa5";
-const SHOTS = join(APP, "docs/screenshots");
+const SHOTS = process.env.SHOTS ?? join(APP, "docs/screenshots");
 const drop = !process.argv.includes("--no-drop");
 mkdirSync(SHOTS, { recursive: true });
 mkdirSync(join(APP, "out"), { recursive: true });
@@ -89,6 +90,17 @@ try {
   check(!drop || opened.includes("Unchecked return value in Treasury.release"), "the browser-sealed drop opens in the browser");
   check(refused === 1, `the copied envelope (#1) is refused (${refused} refused)`);
   await page.screenshot({ path: join(SHOTS, "4-inbox-opened.png"), fullPage: true });
+
+  // 4. Deep links, as the README's judge path uses them
+  await page.goto(`${BASE}/?inbox=demo&key=demo`);
+  await page.locator(".status").waitFor({ timeout: 60_000 });
+  check(
+    (await page.locator(".finding-title").count()) >= 2 && (await page.locator(".card-refused").count()) === 1,
+    "?inbox=demo&key=demo lists the inbox and opens it with the demo seal key",
+  );
+  await page.goto(`${BASE}/?project=demo`);
+  await checks.getByText("Ready to receive sealed reports").waitFor({ timeout: 60_000 });
+  check((await checks.locator(".mark.pass").count()) === 3, "?project=demo runs the 3 key checks");
 
   await page.getByRole("tab", { name: "How it works" }).click();
   await page.screenshot({ path: join(SHOTS, "5-how.png"), fullPage: true });

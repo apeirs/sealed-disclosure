@@ -1,0 +1,2 @@
+qorechain-diana 0x56b6706d009db5357ee076e62c7c7e317e45c353: 7002 bytes on chain, 7002 in the artifact
+MATCH: the deployed inbox runs exactly the compiled contracts/SealedInbox.sol

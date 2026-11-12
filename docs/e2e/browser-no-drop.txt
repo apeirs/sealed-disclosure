@@ -1,0 +1,13 @@
+# node scripts/browser-e2e.mjs --no-drop   (2026-11-12T18:47Z, live testnet; the run with a drop is browser.txt)
+PASS  demo project: 3 of 3 key checks pass in the browser
+PASS  browser sealed and downloaded report-f860b813.sealed (2087 bytes)
+PASS  inbox lists 3 drops
+      Seal key for qor1knxe…nw60fg loaded in memory only. Opened 2 of 3.
+PASS  drop #0 (sealed by the CLI) opens in the browser
+PASS  the browser-sealed drop opens in the browser
+PASS  the copied envelope (#1) is refused (1 refused)
+PASS  ?inbox=demo&key=demo lists the inbox and opens it with the demo seal key
+PASS  ?project=demo runs the 3 key checks
+PASS  no page errors
+
+All browser checks passed.

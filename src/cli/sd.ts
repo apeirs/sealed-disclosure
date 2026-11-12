@@ -4,7 +4,8 @@
  *   npm run sd -- keygen keys/project.mnemonic
  *   npm run sd -- whoami   --key keys/project.mnemonic
  *   npm run sd -- setup    --key keys/project.mnemonic [--seal-key-out project.sealkey.json]
- *   npm run sd -- check    qor1...
+ *   npm run sd -- export-seal-key --key keys/project.mnemonic --out project.sealkey.json
+ *   npm run sd -- check    qor1...                     (exit 1 if the project cannot receive reports)
  *   npm run sd -- report   --key keys/reporter.mnemonic --to qor1... --title "..." --severity high --body-file r.md
  *   npm run sd -- seal     --from qor1... --to qor1... --title ... --severity ... --body-file ... --out r.sealed
  *   npm run sd -- drop     --key keys/reporter.mnemonic --to qor1... --envelope r.sealed
@@ -49,6 +50,7 @@ function printChecks(st: ProjectStatus) {
   console.log(`Project ${st.address} (${st.evm})`);
   for (const c of st.checks) console.log(`  ${c.ok ? "PASS" : "FAIL"}  ${c.label}${c.detail ? ` — ${c.detail}` : ""}`);
   console.log(st.recipient ? "  Ready: reports sealed to this address open only with its keys." : "  Not ready to receive reports.");
+  if (!st.recipient) process.exitCode = 1;
 }
 
 async function main() {

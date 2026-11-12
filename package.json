@@ -12,7 +12,9 @@
     "start": "node server.mjs",
     "sd": "tsx src/cli/sd.ts",
     "compile:contracts": "node contracts/compile.mjs",
-    "test": "tsx --test test/*.test.ts"
+    "verify:deployment": "tsx scripts/verify-deployment.ts",
+    "test": "tsx --test test/*.test.ts test/*.test.mjs",
+    "test:secrets": "scripts/check-secrets.sh dist"
   },
   "dependencies": {
     "@cosmjs/amino": "^0.39.0",
