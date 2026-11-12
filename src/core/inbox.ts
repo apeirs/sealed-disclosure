@@ -48,8 +48,8 @@ export function toAccount(address: string) {
   }
 }
 
-async function getLogsChunked<T>(net: Network, fetchRange: (from: bigint, to: bigint) => Promise<T[]>, from?: bigint): Promise<T[]> {
-  const head = await publicClient(net).getBlockNumber();
+async function getLogsChunked<T>(net: Network, fetchRange: (from: bigint, to: bigint) => Promise<T[]>, from?: bigint, to?: bigint): Promise<T[]> {
+  const head = to ?? (await publicClient(net).getBlockNumber());
   const out: T[] = [];
   for (let start = from ?? net.inboxFromBlock ?? 0n; start <= head; start += LOG_SPAN) {
     const end = start + LOG_SPAN - 1n < head ? start + LOG_SPAN - 1n : head;
@@ -183,12 +183,15 @@ export async function listDrops(net: Network, address: string): Promise<DropEntr
   if (!ids.length) return [];
   const records = await Promise.all(ids.map((id) => client.readContract({ address: inbox, abi: sealedInboxAbi, functionName: "getDrop", args: [id] })));
   const first = records.reduce((m, r: any) => (r.blockNumber < m ? r.blockNumber : m), (records[0] as any).blockNumber as bigint);
-  const logs = await getLogsChunked(net, (fromBlock, toBlock) => client.getLogs({ address: inbox, event: droppedEvent, args: { recipient: evm }, fromBlock, toBlock }), first);
+  // Each record names its drop's block, so the scan stops at the newest drop instead of the chain head
+  // (Diana makes ~2,500 blocks an hour; scanning to the head would add a getLogs call every ~3.5 h).
+  const last = records.reduce((m, r: any) => (r.blockNumber > m ? r.blockNumber : m), first);
+  const logs = await getLogsChunked(net, (fromBlock, toBlock) => client.getLogs({ address: inbox, event: droppedEvent, args: { recipient: evm }, fromBlock, toBlock }), first, last);
   const byId = new Map(logs.map((l) => [l.args.id!, l]));
   return ids.map((id, i) => {
     const r = records[i] as any;
     const log = byId.get(id);
-    if (!log) throw new Error(`Drop ${id} has no Dropped event between blocks ${first} and now.`);
+    if (!log) throw new Error(`Drop ${id} has no Dropped event between blocks ${first} and ${last}.`);
     return {
       id,
       reporter: toAccount(r.reporter).bech32,
