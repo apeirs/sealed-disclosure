@@ -3,6 +3,7 @@
 #   ./deploy.sh                      test, build, secret check, deploy to https://sealed-disclosure.<account>.workers.dev
 #   ./deploy.sh --with-demo-key      also serve the testnet demo project's seal key, so visitors can open its inbox
 #                                    with "Use the demo seal key" (needs public/demo-project.sealkey.json locally)
+#                                    (the hosted demo at sealed-disclosure.apeir.workers.dev is deployed this way)
 #   ./deploy.sh --dry-run            same checks, only bundles the Worker (no Cloudflare login, nothing uploaded)
 # Login: `npx wrangler login` once, or export CLOUDFLARE_API_TOKEN (Workers Scripts: Edit) and CLOUDFLARE_ACCOUNT_ID.
 set -euo pipefail

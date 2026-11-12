@@ -17,8 +17,8 @@ and opened only by the project, in its own browser. The inbox records who report
 
 1. **Open a real inbox, decrypt in your browser:**
    [`?inbox=demo&key=demo`](https://sealed-disclosure.apeir.workers.dev/?inbox=demo&key=demo). The page lists the
-   testnet demo project's drops straight from the contract, loads the demo project's seal key and opens them in the
-   tab: #0 and #2 open; **#1 is refused** because it is a copy of #0 that a second account dropped under its own
+   testnet demo project's drops straight from the contract, loads the demo project's seal key (a throwaway,
+   decrypt-only key the hosted demo serves on purpose) and opens them in the tab: #0 and #2 open; **#1 is refused** because it is a copy of #0 that a second account dropped under its own
    name (see [threat model](#threat-model)).
 2. **Check a recipient and seal a report:**
    [`?project=demo`](https://sealed-disclosure.apeir.workers.dev/?project=demo) reads the project's ML-KEM-1024 key
@@ -214,6 +214,7 @@ computers exist; and the record of who reported what, when.
 | Relays the transaction, or runs the RPC | Delay or drop the transaction (anyone else can relay the same signed drop) | Change it: the signature covers chain, inbox, both accounts and the envelope's SHA-256 |
 | Replays an old card or signature | Nothing | Cards must be newer than the last (`NotNewer`); statements name the chain and the inbox |
 | Hosts the web page | Serve modified JavaScript, as with any web app | Read anything through the gateway: it forwards two public key queries and nothing else. Reporters who do not trust a host can run the page locally or use the CLI |
+| Downloads the hosted demo's seal key (`/demo-project.sealkey.json`, served on purpose) | Read every report sent to the testnet demo project, which is what step 1 above shows | Sign, drop, acknowledge or move funds: a seal key holds only the 32-byte QoreSeal seed, a one-way HKDF output of the demo project's mnemonic, so it can decrypt but not sign or spend. It opens the throwaway demo inbox only, never another project's |
 
 Limits, honestly stated:
 
@@ -224,8 +225,10 @@ Limits, honestly stated:
   ML-KEM key, newer card) is not automated yet.
 - Signing a drop needs the CLI: browser wallets cannot yet sign an arbitrary message with ML-DSA-87. Dropping a
   browser-sealed envelope (`sd drop`) never shows the plain text to the CLI.
-- The demo project's seal key is public on the hosted demo, so anything sent to the demo project is readable by
-  everyone. Never publish the seal key of a project you use; this repository holds no key.
+- The hosted demo serves the demo project's seal key on purpose (`./deploy.sh --with-demo-key`): it is a throwaway
+  testnet demo inbox key that can decrypt but cannot sign or spend, so anything sent to the demo project is readable
+  by everyone. Never publish the seal key of a project you use; this repository holds no key, and a plain
+  `./deploy.sh` ships none.
 
 ## Built with
 
