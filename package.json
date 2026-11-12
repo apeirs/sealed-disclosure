@@ -1,25 +1,43 @@
 {
-  "name": "app",
-  "version": "0.0.0",
+  "name": "sealed-disclosure",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "A minimal Vite + React + TypeScript QoreChain dApp using @qorechain/sdk to read balances and tokenomics.",
+  "description": "Post-quantum vulnerability disclosure for QoreChain projects: reports sealed with ML-KEM-1024 to the project's on-chain key, dropped into an inbox contract that checks the reporter's ML-DSA-87 signature and records who reported first.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "start": "node server.mjs",
+    "sd": "tsx src/cli/sd.ts",
+    "compile:contracts": "node contracts/compile.mjs",
+    "test": "tsx --test test/*.test.ts"
   },
   "dependencies": {
+    "@cosmjs/amino": "^0.39.0",
+    "@cosmjs/encoding": "^0.39.0",
+    "@cosmjs/proto-signing": "^0.39.0",
+    "@cosmjs/stargate": "^0.39.0",
+    "@qorechain/evm": "^0.13.0",
+    "@qorechain/qoreseal": "0.1.0",
+    "@qorechain/qoresign": "^0.2.0",
     "@qorechain/sdk": "^0.13.0",
+    "cosmjs-types": "^0.11.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "viem": "2.57.5"
   },
   "devDependencies": {
+    "@types/node": "^22.7.5",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.0",
+    "create-qorechain-dapp": "0.13.1",
+    "solc": "0.8.24",
+    "tsx": "^4.19.0",
     "typescript": "^5.6.3",
     "vite": "^5.4.0"
-  }
+  },
+  "license": "MIT"
 }
