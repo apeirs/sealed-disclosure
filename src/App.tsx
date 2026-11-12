@@ -1,134 +1,360 @@
-import { useMemo, useState } from "react";
+import { sealKeysFromSeed, fromHex, type SealKeyPair } from "@qorechain/qoreseal";
+import { useMemo, useState, type ReactNode } from "react";
+import { listDrops, openDrop, parseSealKeyFile, resolveProject, sealReport, type Check, type DropEntry, type Opened, type ProjectStatus, type Sealed } from "./core/inbox";
+import { browserNetwork } from "./core/networks";
+import { SEVERITIES, newReport, shortHex, type Severity } from "./core/protocol";
 
-import { createClient, type QoreChainClient } from "@qorechain/sdk";
+/** The testnet demo project: its seal key ships with the page, so anything sent to it is readable by everyone. */
+export const DEMO_PROJECT = "qor1knxej2kffzpx9hcfjd54argxj72vs962nw60fg";
+const DEMO_SEAL_KEY = "/demo-project.sealkey.json";
 
-// Endpoints come from Vite env vars (VITE_-prefixed), with localhost defaults so
-// the app runs out of the box against a local node. Override in `.env`.
-const REST_URL = import.meta.env.VITE_QORE_REST_URL ?? "/lcd";
-const EVM_RPC_URL =
-  import.meta.env.VITE_QORE_EVM_RPC_URL ?? "http://localhost:8545";
+type Tab = "report" | "inbox" | "how";
 
-interface Balance {
-  denom: string;
-  amount: string;
+function errorText(err: unknown): string {
+  const e = err as { shortMessage?: string; message?: string };
+  return e?.shortMessage ?? e?.message ?? String(err);
 }
 
-export function App(): JSX.Element {
-  // One client for the app's lifetime.
-  const client: QoreChainClient = useMemo(
-    () =>
-      createClient({
-        network: "testnet",
-        endpoints: { rest: REST_URL, evmRpc: EVM_RPC_URL },
-      }),
-    [],
+function Checks({ checks }: { checks: Check[] }) {
+  return (
+    <ul className="checks">
+      {checks.map((c) => (
+        <li key={c.label}>
+          <span className={`mark ${c.ok ? "pass" : "fail"}`}>{c.ok ? "PASS" : "FAIL"}</span>
+          <strong>{c.label}</strong>
+          {c.detail && <span className="muted"> · {c.detail}</span>}
+        </li>
+      ))}
+    </ul>
   );
+}
 
-  const [address, setAddress] = useState("");
-  const [balances, setBalances] = useState<Balance[] | null>(null);
-  const [tokenomics, setTokenomics] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+function AddressInput(props: { value: string; onChange: (v: string) => void; onGo: () => void; busy: boolean; go: string; id: string }) {
+  return (
+    <div className="row">
+      <input
+        id={props.id}
+        value={props.value}
+        placeholder="qor1… or 0x…"
+        spellCheck={false}
+        onChange={(e) => props.onChange(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && props.onGo()}
+      />
+      <button className="primary" disabled={props.busy || !props.value.trim()} onClick={props.onGo}>
+        {props.busy ? "Checking…" : props.go}
+      </button>
+    </div>
+  );
+}
 
-  async function loadBalance(): Promise<void> {
-    setError(null);
-    setBalances(null);
-    if (!address.trim()) {
-      setError("Enter an address first.");
-      return;
-    }
-    setLoading(true);
+function download(name: string, bytes: Uint8Array) {
+  const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/octet-stream" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function ReportTab() {
+  const net = useMemo(() => browserNetwork("testnet", location.origin), []);
+  const [project, setProject] = useState("");
+  const [status, setStatus] = useState<ProjectStatus>();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [from, setFrom] = useState("");
+  const [title, setTitle] = useState("");
+  const [severity, setSeverity] = useState<Severity>("high");
+  const [body, setBody] = useState("");
+  const [contact, setContact] = useState("");
+  const [sealed, setSealed] = useState<Sealed & { file: string; to: string }>();
+
+  async function check(address = project) {
+    setBusy(true);
+    setError("");
+    setStatus(undefined);
+    setSealed(undefined);
     try {
-      const res = await client.rest.getAllBalances(address.trim());
-      setBalances(res.balances as Balance[]);
+      setStatus(await resolveProject(net, address));
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(errorText(err));
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
   }
 
-  async function loadTokenomics(): Promise<void> {
-    setError(null);
-    setTokenomics(null);
-    setLoading(true);
+  async function seal() {
+    setError("");
+    setSealed(undefined);
     try {
-      const overview = await client.qor.getTokenomicsOverview();
-      setTokenomics(JSON.stringify(overview, null, 2));
+      const report = newReport({ title, severity, body, contact });
+      const s = await sealReport({ chainId: net.chainId, from, to: status!, report });
+      setSealed({ ...s, file: `report-${s.digest.slice(2, 10)}.sealed`, to: status!.address });
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setLoading(false);
+      setError(errorText(err));
     }
   }
 
   return (
-    <main
-      style={{
-        fontFamily: "system-ui, sans-serif",
-        maxWidth: 720,
-        margin: "2rem auto",
-        padding: "0 1rem",
-        lineHeight: 1.5,
-      }}
-    >
-      <h1>QoreChain dApp</h1>
-      <p style={{ color: "#555" }}>
-        Network: <code>{client.network.name}</code> (
-        <code>{client.network.chainId ?? "n/a"}</code>) &middot; REST:{" "}
-        <code>{REST_URL}</code>
-      </p>
-
-      <section style={{ marginTop: "1.5rem" }}>
-        <h2>Native balance</h2>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <input
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            placeholder="qor1…"
-            style={{ flex: 1, padding: "0.5rem" }}
-            aria-label="QoreChain address"
-          />
-          <button onClick={loadBalance} disabled={loading}>
-            Get balance
+    <>
+      <section className="panel">
+        <h2>1. Check the project</h2>
+        <p>Before anything is written, the page reads the project's keys from the chain and checks they belong together.</p>
+        <AddressInput id="project" value={project} onChange={setProject} onGo={() => check()} busy={busy} go="Check" />
+        <div className="actions">
+          <button className="link" onClick={() => { setProject(DEMO_PROJECT); check(DEMO_PROJECT); }}>
+            Use the testnet demo project
           </button>
         </div>
-        {balances && (
-          <ul>
-            {balances.length === 0 && <li>(no balances)</li>}
-            {balances.map((b) => (
-              <li key={b.denom}>
-                {b.amount} {b.denom}
-              </li>
-            ))}
-          </ul>
+        {status && (
+          <div className={`verify ${status.recipient ? "ok" : "bad"}`} data-testid="project-checks">
+            <p className="verify-head">{status.recipient ? "Ready to receive sealed reports" : "Not ready to receive reports"}</p>
+            <code className="addr">{status.address}</code>
+            <Checks checks={status.checks} />
+          </div>
         )}
       </section>
 
-      <section style={{ marginTop: "1.5rem" }}>
-        <h2>Tokenomics overview</h2>
-        <button onClick={loadTokenomics} disabled={loading}>
-          Read qor_getTokenomicsOverview
-        </button>
-        {tokenomics && (
-          <pre
-            style={{
-              background: "#f5f5f5",
-              padding: "1rem",
-              overflowX: "auto",
-              borderRadius: 6,
-            }}
-          >
-            {tokenomics}
-          </pre>
-        )}
-      </section>
-
-      {error && (
-        <p style={{ color: "#b00020", marginTop: "1rem" }} role="alert">
-          {error}
-        </p>
+      {status?.recipient && (
+        <section className="panel">
+          <h2>2. Write and seal the report</h2>
+          <p>
+            Sealed here, in this tab, to the project's ML-KEM-1024 + X25519 keys. The plain text is never sent anywhere; the
+            envelope also names your address, so nobody can re-send it as their own.
+          </p>
+          <label htmlFor="from">Your address (the one that will sign the drop)</label>
+          <input id="from" className="wide" value={from} placeholder="qor1…" spellCheck={false} onChange={(e) => setFrom(e.target.value)} />
+          <div className="grid2">
+            <div>
+              <label htmlFor="title">Title</label>
+              <input id="title" className="wide" value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} />
+            </div>
+            <div>
+              <label htmlFor="severity">Severity</label>
+              <select id="severity" value={severity} onChange={(e) => setSeverity(e.target.value as Severity)}>
+                {SEVERITIES.map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <label htmlFor="body">Details: affected component, steps to reproduce, impact, suggested fix</label>
+          <textarea id="body" rows={8} value={body} onChange={(e) => setBody(e.target.value)} />
+          <label htmlFor="contact">How to reach you (optional, travels encrypted)</label>
+          <input id="contact" className="wide" value={contact} onChange={(e) => setContact(e.target.value)} />
+          <div className="actions">
+            <button className="primary" disabled={!from.trim() || !title.trim() || !body.trim()} onClick={seal}>
+              Seal in this browser
+            </button>
+          </div>
+        </section>
       )}
-    </main>
+
+      {sealed && (
+        <section className="panel" data-testid="sealed">
+          <h2>3. Drop it in the inbox</h2>
+          <ul className="facts">
+            <li>Envelope: <strong>{sealed.envelope.length.toLocaleString()} bytes</strong></li>
+            <li>SHA-256: <code>{shortHex(sealed.digest, 10)}</code></li>
+            <li>Opens for: <strong>{sealed.to.slice(0, 12)}…</strong> only</li>
+          </ul>
+          <div className="actions">
+            <button className="primary" onClick={() => download(sealed.file, sealed.envelope)}>Download {sealed.file}</button>
+          </div>
+          <p className="muted">
+            Then sign and drop it with your key (QoreX cannot sign arbitrary messages yet, so the hybrid signature is made by the
+            command line, which never sees your report in plain text):
+          </p>
+          <pre className="cmd">npm run sd -- drop --key &lt;your key file&gt; --to {sealed.to} --envelope {sealed.file}</pre>
+        </section>
+      )}
+      {error && <p className="error">{error}</p>}
+    </>
+  );
+}
+
+function DropCard({ d, opened }: { d: DropEntry; opened?: Opened }) {
+  return (
+    <article className={`card ${opened && !opened.ok ? "card-refused" : ""}`} data-testid="drop">
+      <div className="drop-head">
+        <span className="drop-id">#{d.id.toString()}</span>
+        <div>
+          <span className="muted">from</span> <code className="addr inline">{d.reporter}</code>
+          <div className="muted small">
+            block {d.blockNumber.toString()} · {new Date(Number(d.timestamp) * 1000).toISOString().replace(".000", "")} · {d.size.toLocaleString()} bytes ·{" "}
+            {d.receiptBlock ? `acknowledged in block ${d.receiptBlock}` : "not acknowledged yet"}
+          </div>
+          <div className="muted small">
+            tx <code>{shortHex(d.txHash, 8)}</code> · envelope <code>{shortHex(d.digest, 8)}</code>
+          </div>
+        </div>
+      </div>
+      {!opened && <p className="muted sealed-note">Sealed. Load the project's seal key to open it here.</p>}
+      {opened && !opened.ok && <p className="error">Refused: {opened.reason}</p>}
+      {opened?.ok && (
+        <div className={`finding sev-${opened.report.severity}`}>
+          <div>
+            <span className="sev">{opened.report.severity}</span>
+            <span className="finding-title">{opened.report.title}</span>
+          </div>
+          <p className="muted small">
+            Opened in this browser. Written {opened.report.createdAt}; sealed by the address the inbox recorded as sender.
+            {opened.report.contact && <> Contact: {opened.report.contact}</>}
+          </p>
+          <pre className="body">{opened.report.body}</pre>
+        </div>
+      )}
+    </article>
+  );
+}
+
+function InboxTab() {
+  const net = useMemo(() => browserNetwork("testnet", location.origin), []);
+  const [address, setAddress] = useState("");
+  const [drops, setDrops] = useState<DropEntry[]>();
+  const [opened, setOpened] = useState<Record<string, Opened>>({});
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [keyNote, setKeyNote] = useState("");
+
+  async function load(a = address) {
+    setBusy(true);
+    setError("");
+    setDrops(undefined);
+    setOpened({});
+    setKeyNote("");
+    try {
+      setDrops(await listDrops(net, a));
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function useKey(text: string) {
+    setError("");
+    try {
+      const f = parseSealKeyFile(text);
+      if (f.chainId !== net.chainId) throw new Error(`This seal key is for ${f.chainId}, not ${net.chainId}.`);
+      if (drops?.length && drops[0].recipient !== f.address) throw new Error(`This seal key belongs to ${f.address}, not to this inbox.`);
+      const keys: SealKeyPair = sealKeysFromSeed(fromHex(f.seed));
+      const out: Record<string, Opened> = {};
+      for (const d of drops ?? []) out[d.id.toString()] = await openDrop(net.chainId, d, keys);
+      setOpened(out);
+      const n = Object.values(out).filter((o) => o.ok).length;
+      setKeyNote(`Seal key for ${shortHex(f.address, 6)} loaded in memory only. Opened ${n} of ${drops?.length ?? 0}.`);
+    } catch (err) {
+      setError(errorText(err));
+    }
+  }
+
+  return (
+    <>
+      <section className="panel">
+        <h2>Read an inbox</h2>
+        <p>Anyone can list an inbox: the envelopes are public, the reports are not.</p>
+        <AddressInput id="inbox" value={address} onChange={setAddress} onGo={() => load()} busy={busy} go="List drops" />
+        <div className="actions">
+          <button className="link" onClick={() => { setAddress(DEMO_PROJECT); load(DEMO_PROJECT); }}>
+            Open the testnet demo project's inbox
+          </button>
+        </div>
+      </section>
+      {drops && (
+        <section className="panel">
+          <div className="inbox-head">
+            <h2>{drops.length} drop{drops.length === 1 ? "" : "s"}</h2>
+            <div className="actions">
+              <label className="file">
+                Load seal key…
+                <input type="file" accept=".json,application/json" onChange={async (e) => { const f = e.target.files?.[0]; if (f) await useKey(await f.text()); e.target.value = ""; }} />
+              </label>
+              {drops[0]?.recipient === DEMO_PROJECT && (
+                <button
+                  onClick={async () => {
+                    const r = await fetch(DEMO_SEAL_KEY).catch(() => undefined);
+                    if (!r?.ok) return setError("This deployment does not ship the demo seal key.");
+                    await useKey(await r.text());
+                  }}
+                >
+                  Use the demo seal key
+                </button>
+              )}
+            </div>
+          </div>
+          <p className="muted small">
+            A seal key holds only the 32-byte QoreSeal seed: it decrypts, it cannot sign or move funds. Make one with{" "}
+            <code>npm run sd -- export-seal-key --key &lt;key file&gt; --out me.sealkey.json</code>. It stays in this tab.
+          </p>
+          {keyNote && <p className="status">{keyNote}</p>}
+          <div className="results">
+            {drops.map((d) => (
+              <DropCard key={d.id.toString()} d={d} opened={opened[d.id.toString()]} />
+            ))}
+          </div>
+        </section>
+      )}
+      {error && <p className="error">{error}</p>}
+    </>
+  );
+}
+
+function HowTab() {
+  const net = browserNetwork("testnet", location.origin);
+  const steps: [string, ReactNode][] = [
+    ["Project publishes keys", <>an ML-KEM-1024 key in the chain's KEM registry (<code>MsgRegisterKEMKey</code>, hybrid-signed) and a recipient card naming that key and an X25519 key, signed with its secp256k1 + ML-DSA-87 keys and stored in the inbox contract. A newer card replaces an older one; an old card cannot be replayed.</>],
+    ["Reporter checks and seals", <>the page reads both keys, verifies the card against the account's registered ML-DSA-87 key, and seals the report with QoreSeal (ML-KEM-1024 + X25519 → AES-256-GCM). The sender and recipient addresses are authenticated data of the envelope.</>],
+    ["Reporter drops it", <>the reporter's ML-DSA-87 key signs a statement naming the inbox, both addresses and the envelope's SHA-256. <code>SealedInbox.drop</code> checks that signature on chain with the <code>pqcVerify</code> precompile against the key from <code>pqcKeyStatus</code> (proof of possession required), and records the block: a public, post-quantum-signed timestamp of who reported what, first.</>],
+    ["Project opens it", <>only the project's keys open the envelope, in its browser. It opens only under the sender the inbox recorded, so a copied envelope re-dropped by someone else stays shut.</>],
+    ["Project acknowledges", <>the project signs a receipt for the drop with its ML-DSA-87 key; the contract checks it the same way. The reporter can point to it.</>],
+  ];
+  return (
+    <section className="panel">
+      <h2>How it works</h2>
+      <ol className="steps big">
+        {steps.map(([h, t]) => (
+          <li key={h}><strong>{h}:</strong> {t}</li>
+        ))}
+      </ol>
+      <p className="muted small">
+        Inbox on {net.chainId}: <code>{net.inbox}</code>. Every write is relayed by the account's own Ethereum-type key inside a
+        one-transaction EVM window scoped to the inbox, opened with a hybrid-signed native message.
+      </p>
+    </section>
+  );
+}
+
+export function App() {
+  const [tab, setTab] = useState<Tab>("report");
+  const tabs: [Tab, string][] = [
+    ["report", "Send a report"],
+    ["inbox", "Inbox"],
+    ["how", "How it works"],
+  ];
+  return (
+    <div className="page">
+      <header className="top">
+        <div>
+          <h1>Sealed Disclosure</h1>
+          <p className="tag">Post-quantum vulnerability reports for QoreChain projects: sealed in your browser with ML-KEM-1024, opened only by the project, timestamped on chain with ML-DSA-87.</p>
+        </div>
+        <span className="pill">QoreChain testnet</span>
+      </header>
+      <nav className="tabs" role="tablist">
+        {tabs.map(([t, label]) => (
+          <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>
+            {label}
+          </button>
+        ))}
+      </nav>
+      {tab === "report" && <ReportTab />}
+      {tab === "inbox" && <InboxTab />}
+      {tab === "how" && <HowTab />}
+      <footer className="foot">
+        Open source (MIT). Built with create-qorechain-dapp, @qorechain/sdk, QoreSign, QoreSeal and viem. Testnet only: do not send real
+        vulnerability details to the demo project, whose seal key is public.
+      </footer>
+    </div>
   );
 }

@@ -1,19 +1,24 @@
 import react from "@vitejs/plugin-react";
-import { defineConfig, loadEnv } from "vite";
+import { defineConfig, type Plugin } from "vite";
+// @ts-expect-error plain ESM module shared with server.mjs
+import { gatewayMiddleware } from "./gateway.mjs";
 
-// The public REST API sends no CORS headers, so the browser reaches it through
-// the dev (and preview) server: /lcd/* is forwarded to QORE_REST_PROXY_TARGET.
-// In production, serve the app behind a proxy that does the same, or set
-// VITE_QORE_REST_URL to an endpoint that allows your origin.
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, ".", "");
-  const target = env.QORE_REST_PROXY_TARGET || "http://localhost:1317";
-  const proxy = {
-    "/lcd": { target, changeOrigin: true, rewrite: (p: string) => p.replace(/^\/lcd/, "") },
-  };
+/** The chain's REST API sends no CORS headers: serve a read-only gateway on the same origin. */
+function chainGateway(): Plugin {
   return {
-    plugins: [react()],
-    server: { port: 5173, proxy },
-    preview: { proxy },
+    name: "sealed-disclosure-chain-gateway",
+    configureServer(server) {
+      server.middlewares.use(gatewayMiddleware());
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(gatewayMiddleware());
+    },
   };
+}
+
+export default defineConfig({
+  plugins: [react(), chainGateway()],
+  server: { port: 5173 },
+  preview: { port: 4173 },
+  build: { chunkSizeWarningLimit: 4000 },
 });
