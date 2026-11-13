@@ -1,12 +1,15 @@
 import { sealKeysFromSeed, fromHex, type SealKeyPair } from "@qorechain/qoreseal";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { listDrops, openDrop, parseSealKeyFile, resolveProject, sealReport, type Check, type DropEntry, type Opened, type ProjectStatus, type Sealed } from "./core/inbox";
-import { browserNetwork } from "./core/networks";
+import { NETWORKS, browserNetwork } from "./core/networks";
 import { SEVERITIES, newReport, shortHex, type Severity } from "./core/protocol";
 
 /** The testnet demo project: its seal key ships with the page, so anything sent to it is readable by everyone. */
 export const DEMO_PROJECT = "qor1knxej2kffzpx9hcfjd54argxj72vs962nw60fg";
 const DEMO_SEAL_KEY = "/demo-project.sealkey.json";
+/** The testnet demo reporter (drops #0 and #2): a juror can seal to the demo project in one click. */
+const DEMO_REPORTER = "qor1uss0ahjc6kgygjmgamsqrmppnpdvd5u7vrlqa5";
+const REPO = "https://github.com/apeirs/sealed-disclosure";
 
 type Tab = "report" | "inbox" | "how";
 
@@ -156,6 +159,20 @@ function ReportTab({ initial }: { initial?: string }) {
             Sealed here, in this tab, to the project's ML-KEM-1024 + X25519 keys. The plain text is never sent anywhere; the
             envelope also names your address, so nobody can re-send it as their own.
           </p>
+          <div className="actions">
+            <button
+              className="link"
+              onClick={() => {
+                setFrom(DEMO_REPORTER);
+                setTitle("Example: missing access check in Vault.setOwner");
+                setSeverity("medium");
+                setBody("Component: Vault.setOwner (example only)\nSteps: call setOwner(attacker) from any account.\nImpact: anyone can take ownership of the vault.\nFix: require msg.sender == owner.");
+                setContact("this inbox");
+              }}
+            >
+              Fill in an example report from the demo reporter
+            </button>
+          </div>
           <label htmlFor="from">Your address (the one that will sign the drop)</label>
           <input id="from" className="wide" value={from} placeholder="qor1…" spellCheck={false} onChange={(e) => setFrom(e.target.value)} />
           <div className="grid2">
@@ -365,6 +382,9 @@ function HowTab() {
   );
 }
 
+const EXPLORER = NETWORKS.testnet.explorer;
+const INBOX = NETWORKS.testnet.inbox;
+
 export function App() {
   const link = useMemo(() => readLink(location.search), []);
   const [tab, setTab] = useState<Tab>(link.tab);
@@ -395,7 +415,12 @@ export function App() {
       {tab === "inbox" && <InboxTab initial={fresh ? link.inbox : undefined} demoKey={fresh && link.demoKey} />}
       {tab === "how" && <HowTab />}
       <footer className="foot">
-        Open source (MIT). Built with create-qorechain-dapp, @qorechain/sdk, QoreSign, QoreSeal and viem. Testnet only: do not send real
+        <p className="foot-links">
+          <a href={REPO}>Source (MIT)</a> · <a href={`${REPO}/releases/download/v0.1.0/sealed-disclosure-demo.mp4`}>Demo video</a> ·{" "}
+          <a href={`${EXPLORER}/address/${INBOX}`} title="The explorer opens on mainnet: switch it to Testnet">SealedInbox on the explorer</a> ·{" "}
+          <a href="https://build.qorechain.io">Build Before Q-Day</a>
+        </p>
+        Built with create-qorechain-dapp, @qorechain/sdk, QoreSign, QoreSeal and viem. Testnet only: do not send real
         vulnerability details to the demo project, whose seal key is public.
       </footer>
     </div>

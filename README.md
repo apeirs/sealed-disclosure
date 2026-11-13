@@ -1,30 +1,41 @@
 # Sealed Disclosure
 
 [![CI](https://github.com/apeirs/sealed-disclosure/actions/workflows/ci.yml/badge.svg)](https://github.com/apeirs/sealed-disclosure/actions/workflows/ci.yml)
+[![QoreChain testnet](https://img.shields.io/badge/QoreChain-testnet%20Diana-3b5bdb)](#live-on-qorechain-testnet-diana)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-Post-quantum vulnerability disclosure for QoreChain projects: a report is encrypted in the reporter's browser to the
+**What:** a vulnerability-report inbox for QoreChain projects. A report is encrypted in the reporter's browser to the
 project's registered ML-KEM-1024 key, dropped into an on-chain inbox that checks the reporter's ML-DSA-87 signature,
-and opened only by the project, in its own browser. The inbox records who reported first.
+and opened only by the project, in its own browser. The inbox records who reported first. (Category: Encrypted Apps)
 
-**Live demo: https://sealed-disclosure.apeir.workers.dev** ·
-[Demo video](https://github.com/apeirs/sealed-disclosure/releases/download/v0.1.0/sealed-disclosure-demo.mp4) ·
-`SealedInbox` on QoreChain testnet: [`0x56b6706d009db5357ee076e62c7c7e317e45c353`](https://explore.qore.network/address/0x56b6706d009db5357ee076e62c7c7e317e45c353)
-(Category: Encrypted Apps)
+**Why:** a vulnerability report is the most sensitive message a project receives. Sent under classical encryption,
+it can be stored today and read once quantum computers break the key exchange; and a reporter has no proof of being
+first, while anyone who sees the report can send it again under their own name.
 
-![Sealed Disclosure](docs/featured.png)
+**Proof, on QoreChain testnet (Diana):**
+- `SealedInbox` [`0x56b6706d009db5357ee076e62c7c7e317e45c353`](https://explore.qore.network/address/0x56b6706d009db5357ee076e62c7c7e317e45c353)
+  runs exactly [`contracts/SealedInbox.sol`](contracts/SealedInbox.sol): `npm run verify:deployment` → MATCH, 7,002
+  bytes ([output](docs/e2e/verify-deployment.txt)).
+- The demo project's inbox holds 3 drops: #0 and #2 open in the browser, #1 (a copy of #0 dropped by another
+  account) is refused. 9/9 browser checks ([output](docs/e2e/browser-no-drop.txt)).
+- 17/17 attacks refused on the live inbox as free `eth_call` simulations: replay, wrong envelope, wrong key, old card,
+  copied drop ([output](docs/e2e/negative.txt)). 20 offline tests (`npm ci && npm test`); CI runs them, the build, a
+  bytecode-equals-source check, a secret check and the Worker bundle.
+- **Live demo: https://sealed-disclosure.apeir.workers.dev** ·
+  [Demo video](https://github.com/apeirs/sealed-disclosure/releases/download/v0.1.0/sealed-disclosure-demo.mp4) (2 min 18 s)
 
-## Try it in two minutes
+## Judge path (about 3 minutes)
 
 1. **Open a real inbox, decrypt in your browser:**
    [`?inbox=demo&key=demo`](https://sealed-disclosure.apeir.workers.dev/?inbox=demo&key=demo). The page lists the
    testnet demo project's drops straight from the contract, loads the demo project's seal key (a throwaway,
-   decrypt-only key the hosted demo serves on purpose) and opens them in the tab: #0 and #2 open; **#1 is refused** because it is a copy of #0 that a second account dropped under its own
-   name (see [threat model](#threat-model)).
+   decrypt-only key the hosted demo serves on purpose) and opens them in the tab: #0 and #2 open; **#1 is refused**
+   because it is a copy of #0 that a second account dropped under its own name (see [threat model](#threat-model)).
 2. **Check a recipient and seal a report:**
    [`?project=demo`](https://sealed-disclosure.apeir.workers.dev/?project=demo) reads the project's ML-KEM-1024 key
    from the chain's KEM registry and its ML-DSA-87 key from the PQC module, and verifies its signed recipient card
-   (3 checks). Write a report and press "Seal in this browser": the envelope is built in the page and offered as a
-   download; nothing is sent anywhere.
+   (3 checks). Press "Fill in an example report from the demo reporter", then "Seal in this browser": the envelope
+   is built in the page and offered as a download; nothing is sent anywhere.
 3. **Confirm it on chain:** the [drop](https://explore.qore.network/tx/0x915ef838efdaeee4749fa70764dc7385da2f93bebc51b57dedc59dd21c3c1aa4),
    the [project's signed receipt](https://explore.qore.network/tx/0xf1826ed8d2386cd445157546f03fe1b20e3c19660ad1fe133ba313713e00e73a)
    and the [copied drop](https://explore.qore.network/tx/0x5666716a8be51fdca5a8f9b22803561ed403faaf1e0ae89ac9422fad38b2f63e).
@@ -33,6 +44,10 @@ and opened only by the project, in its own browser. The inbox records who report
    ([output](docs/e2e/verify-deployment.txt)).
 4. **Run the tests:** `npm ci && npm test` (20 offline tests, a few seconds). The live checks are in
    [End-to-end checks](#end-to-end-checks-against-the-live-inbox).
+5. **Check the claims:** the [requirements table](#encrypted-apps-requirements-where-to-find-each-one) maps each
+   Encrypted Apps item to a file, a test and a testnet tx; [Honest limits](#honest-limits) says what this does not do.
+
+![Sealed Disclosure](docs/featured.png)
 
 ## Encrypted Apps requirements: where to find each one
 
@@ -216,7 +231,7 @@ computers exist; and the record of who reported what, when.
 | Hosts the web page | Serve modified JavaScript, as with any web app | Read anything through the gateway: it forwards two public key queries and nothing else. Reporters who do not trust a host can run the page locally or use the CLI |
 | Downloads the hosted demo's seal key (`/demo-project.sealkey.json`, served on purpose) | Read every report sent to the testnet demo project, which is what step 1 above shows | Sign, drop, acknowledge or move funds: a seal key holds only the 32-byte QoreSeal seed, a one-way HKDF output of the demo project's mnemonic, so it can decrypt but not sign or spend. It opens the throwaway demo inbox only, never another project's |
 
-Limits, honestly stated:
+## Honest limits
 
 - Testnet software, not audited.
 - Metadata is public by design: that `A` sent `B` a report of `N` bytes at block `X`.
@@ -229,20 +244,31 @@ Limits, honestly stated:
   testnet demo inbox key that can decrypt but cannot sign or spend, so anything sent to the demo project is readable
   by everyone. Never publish the seal key of a project you use; this repository holds no key, and a plain
   `./deploy.sh` ships none.
+- The demo run's three accounts (project, reporter, second reporter) are ours, with their keys on one machine; drops
+  #0 to #2 are example reports about example contracts, not real findings.
+- The demo video is a captioned walkthrough of the real screenshots and command output, not a screen recording.
 
 ## Built with
 
-- [create-qorechain-dapp](https://www.npmjs.com/package/create-qorechain-dapp) 0.13.1 (fullstack-web template),
-  the starting point of this repo.
-- [@qorechain/sdk](https://www.npmjs.com/package/@qorechain/sdk) and
-  [@qorechain/evm](https://www.npmjs.com/package/@qorechain/evm) 0.13 (Apache-2.0): accounts, PQC key
-  registration, KEM registration, EVM windows.
-- [@qorechain/qoresign](https://www.npmjs.com/package/@qorechain/qoresign) 0.2 (Apache-2.0): hybrid secp256k1 +
-  ML-DSA-87 signing and message signatures.
-- [@qorechain/qoreseal](https://www.npmjs.com/package/@qorechain/qoreseal) 0.1 (Apache-2.0): ML-KEM-1024 + X25519
-  envelopes and recipient cards.
-- [viem](https://viem.sh) (MIT), [React](https://react.dev) (MIT), [Vite](https://vitejs.dev) (MIT),
-  [solc-js](https://github.com/ethereum/solc-js) (MIT), CosmJS (Apache-2.0).
+Every kit and library this build uses, with its licence:
+
+| What | Licence | Used for |
+| --- | --- | --- |
+| [create-qorechain-dapp](https://www.npmjs.com/package/create-qorechain-dapp) 0.13.1 (fullstack-web template) | Apache-2.0 | the starting point of this repo |
+| [@qorechain/sdk](https://www.npmjs.com/package/@qorechain/sdk) and [@qorechain/evm](https://www.npmjs.com/package/@qorechain/evm) 0.13 | Apache-2.0 | accounts, PQC and KEM key registration, EVM windows |
+| [@qorechain/qoresign](https://www.npmjs.com/package/@qorechain/qoresign) 0.2 | Apache-2.0 | hybrid secp256k1 + ML-DSA-87 signing and message signatures |
+| [@qorechain/qoreseal](https://www.npmjs.com/package/@qorechain/qoreseal) 0.1 | Apache-2.0 | ML-KEM-1024 + X25519 envelopes and recipient cards |
+| [@qorechain/pqc](https://www.npmjs.com/package/@qorechain/pqc) 0.2.3 (under QoreSign and QoreSeal) | Apache-2.0 | ML-DSA and ML-KEM |
+| QoreChain testnet: PQC module, KEM key registry, precompiles `0x0a01` (PQC Verify) and `0x0a02` (PQC Key Status) | chain features | key registration and the on-chain ML-DSA-87 checks |
+| [@noble/post-quantum](https://github.com/paulmillr/noble-post-quantum), [@noble/ciphers](https://github.com/paulmillr/noble-ciphers), [@noble/curves](https://github.com/paulmillr/noble-curves), [@noble/hashes](https://github.com/paulmillr/noble-hashes), [@scure/base, bip32, bip39](https://github.com/paulmillr/scure-base) (under the QoreChain packages and viem) | MIT | ML-KEM, ML-DSA, X25519, AES-256-GCM, SHA-2/3, HKDF, encodings |
+| [CosmJS](https://github.com/cosmos/cosmjs) 0.39 and [cosmjs-types](https://github.com/confio/cosmjs-types) 0.11 | Apache-2.0 | native QoreChain transactions and REST reads |
+| [viem](https://viem.sh) 2.57 | MIT | EVM reads and writes |
+| [React](https://react.dev) 18 | MIT | the web app |
+| [Vite](https://vitejs.dev) 5 and [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react) | MIT | build and dev server |
+| [solc-js](https://github.com/ethereum/solc-js) 0.8.24 | MIT | compiling `SealedInbox.sol` |
+| [TypeScript](https://www.typescriptlang.org) 5 and [tsx](https://github.com/privatenumber/tsx) 4 | Apache-2.0, MIT | types, the CLI and the tests |
+| [Wrangler](https://github.com/cloudflare/workers-sdk) 4.160 (Cloudflare Workers) | MIT OR Apache-2.0 | the hosted demo |
+| [playwright-core](https://github.com/microsoft/playwright) (optional, not a dependency) | Apache-2.0 | the browser end-to-end run |
 
 ## License
 

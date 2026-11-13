@@ -44,6 +44,7 @@ body {
 code, textarea, input { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; }
 .page { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
 .top { display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+.top > div:first-child { flex: 1 1 420px; }
 .top h1 { margin: 0; font-size: 26px; }
 .tag { margin: 4px 0 0; color: var(--muted); }
 .top-right { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
@@ -112,6 +113,7 @@ button.link { border: none; background: none; color: var(--accent); padding: 0; 
 .mark.pass { color: var(--low); } .mark.fail { color: var(--crit); } .mark.na { color: var(--info); }
 .verify a { color: var(--accent); }
 .foot { color: var(--muted); font-size: 13px; border-top: 1px solid var(--border); padding-top: 12px; }
+.foot-links { margin: 0 0 6px; }
 .muted { color: var(--muted); }
 .steps { display: grid; gap: 4px; margin: 10px 0 0; padding: 0; list-style: none; counter-reset: step; font-size: 14px; color: var(--muted); }
 .steps li { counter-increment: step; }
