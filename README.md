@@ -22,7 +22,7 @@ first, while anyone who sees the report can send it again under their own name.
   copied drop ([output](docs/e2e/negative.txt)). 20 offline tests (`npm ci && npm test`); CI runs them, the build, a
   bytecode-equals-source check, a secret check and the Worker bundle.
 - **Live demo: https://sealed-disclosure.apeir.workers.dev** ·
-  [Demo video](https://github.com/apeirs/sealed-disclosure/releases/download/v0.1.0/sealed-disclosure-demo.mp4) (2 min 18 s)
+  [Demo video](https://github.com/apeirs/sealed-disclosure/releases/download/v0.1.0/sealed-disclosure-demo.mp4) (2 min 47 s)
 
 ## Judge path (about 3 minutes)
 
@@ -36,9 +36,9 @@ first, while anyone who sees the report can send it again under their own name.
    from the chain's KEM registry and its ML-DSA-87 key from the PQC module, and verifies its signed recipient card
    (3 checks). Press "Fill in an example report from the demo reporter", then "Seal in this browser": the envelope
    is built in the page and offered as a download; nothing is sent anywhere.
-3. **Confirm it on chain:** the [drop](https://explore.qore.network/tx/0x915ef838efdaeee4749fa70764dc7385da2f93bebc51b57dedc59dd21c3c1aa4),
-   the [project's signed receipt](https://explore.qore.network/tx/0xf1826ed8d2386cd445157546f03fe1b20e3c19660ad1fe133ba313713e00e73a)
-   and the [copied drop](https://explore.qore.network/tx/0x5666716a8be51fdca5a8f9b22803561ed403faaf1e0ae89ac9422fad38b2f63e).
+3. **Confirm it on chain:** the [drop](https://explore.qore.network/tx/3D1D8822675995288037DC989573A9D1CCDAF0B641E4D5F38F9F08EFD3D3219E),
+   the [project's signed receipt](https://explore.qore.network/tx/D387C5EB584DE2E5AF427CC503696AEF11383A47830ACE3C3FCCEE19EAE56BF0)
+   and the [copied drop](https://explore.qore.network/tx/3D85BDB0CA1A6B4C15C4D2DC9F3478FE4F4511626F9C977D65F96435B3E973F5).
    The explorer opens on mainnet: switch it to Testnet. `npm run verify:deployment` shows the deployed bytecode is
    exactly the compiled [`contracts/SealedInbox.sol`](contracts/SealedInbox.sol)
    ([output](docs/e2e/verify-deployment.txt)).
@@ -53,9 +53,9 @@ first, while anyone who sees the report can send it again under their own name.
 
 | Requirement | Where |
 | --- | --- |
-| **ML-KEM-1024 encryption** | Reports are sealed with QoreSeal's hybrid envelope (ML-KEM-1024 + X25519, AES-256-GCM): `sealReport` in [`src/core/inbox.ts`](src/core/inbox.ts), from the browser ([`src/App.tsx`](src/App.tsx), "Seal in this browser") and the CLI (`sd seal`, `sd report`). Test: "only the recipient opens it, and only under the true sender" in [`test/protocol.test.ts`](test/protocol.test.ts). Envelopes on chain: drops [#0](https://explore.qore.network/tx/0x915ef838efdaeee4749fa70764dc7385da2f93bebc51b57dedc59dd21c3c1aa4) (2,245 bytes) and [#2](https://explore.qore.network/tx/0x7a4dbef7ad85c22aa6eb760b4fd6389b3b6a496152b07c1dee03ad7464fb2d73) (2,087 bytes, sealed in the browser) |
+| **ML-KEM-1024 encryption** | Reports are sealed with QoreSeal's hybrid envelope (ML-KEM-1024 + X25519, AES-256-GCM): `sealReport` in [`src/core/inbox.ts`](src/core/inbox.ts), from the browser ([`src/App.tsx`](src/App.tsx), "Seal in this browser") and the CLI (`sd seal`, `sd report`). Test: "only the recipient opens it, and only under the true sender" in [`test/protocol.test.ts`](test/protocol.test.ts). Envelopes on chain: drops [#0](https://explore.qore.network/tx/3D1D8822675995288037DC989573A9D1CCDAF0B641E4D5F38F9F08EFD3D3219E) (2,245 bytes) and [#2](https://explore.qore.network/tx/19FA4B0E6DDED35648D6D3DBDB4AD9FD6381732F494D9230FC2FE6038B752375) (2,087 bytes, sealed in the browser) |
 | **Registered recipient keys** | The project registers its ML-KEM-1024 key in the chain's KEM key registry with a hybrid-signed `MsgRegisterKEMKey` (`ensureKemKey` in [`src/cli/account.ts`](src/cli/account.ts); tx [`CA2E5552…5726`](https://api-testnet.qore.host/cosmos/tx/v1beta1/txs/CA2E5552977ADFBFBDE67116BCAADE93B8300E97C249220FE67DDEA2571E5726)). Senders seal only to the key read from the registry (`fetchKemKey` in `resolveProject`, [`src/core/inbox.ts`](src/core/inbox.ts)); the page and `sd check` show it as the first check and refuse to seal without it (test: "refuses to seal to a project that failed its checks") |
-| **ML-DSA key binding** | Three bindings, each checked against the ML-DSA-87 key registered with proof of possession: (1) the recipient card that names the project's ML-KEM-1024 and X25519 keys is signed by its ML-DSA-87 key, checked on chain by `publishCard` (PQC Verify precompile `0x0a01`, key from PQC Key Status `0x0a02`) and again by the sender against the registry key (tests: "a card does not verify against another account's keys", on-chain `BadSignature`/`BadCard`/`NotNewer` in [`docs/e2e/negative.txt`](docs/e2e/negative.txt)); (2) every drop is signed by the reporter's ML-DSA-87 key over a statement naming the chain, inbox, both accounts and the envelope's SHA-256, rebuilt and checked by `SealedInbox.drop`; (3) the project's receipt is signed the same way (`acknowledge`). Card tx [`0x352d7b11…`](https://explore.qore.network/tx/0x352d7b1176472960105eb552bfb110236fcb0b0322dbaa6701ff6101edf6c4f8); ML-DSA-87 registrations [`C57C78EA…`](https://api-testnet.qore.host/cosmos/tx/v1beta1/txs/C57C78EA4C7E33280A63FCF21003321141964D867C11F174B3A44550654C6160) (project) and [`0398795F…`](https://api-testnet.qore.host/cosmos/tx/v1beta1/txs/0398795F70032DBC28310D046A321AE2C298440EF218912CA4FB0BCC449E5C98) (reporter) |
+| **ML-DSA key binding** | Three bindings, each checked against the ML-DSA-87 key registered with proof of possession: (1) the recipient card that names the project's ML-KEM-1024 and X25519 keys is signed by its ML-DSA-87 key, checked on chain by `publishCard` (PQC Verify precompile `0x0a01`, key from PQC Key Status `0x0a02`) and again by the sender against the registry key (tests: "a card does not verify against another account's keys", on-chain `BadSignature`/`BadCard`/`NotNewer` in [`docs/e2e/negative.txt`](docs/e2e/negative.txt)); (2) every drop is signed by the reporter's ML-DSA-87 key over a statement naming the chain, inbox, both accounts and the envelope's SHA-256, rebuilt and checked by `SealedInbox.drop`; (3) the project's receipt is signed the same way (`acknowledge`). Card tx [`0x352d7b11…`](https://explore.qore.network/tx/7DB65CCC0244793A5F345E9757CC0A13A05DCB1C31EF4FBE4397F78A36226A84); ML-DSA-87 registrations [`C57C78EA…`](https://api-testnet.qore.host/cosmos/tx/v1beta1/txs/C57C78EA4C7E33280A63FCF21003321141964D867C11F174B3A44550654C6160) (project) and [`0398795F…`](https://api-testnet.qore.host/cosmos/tx/v1beta1/txs/0398795F70032DBC28310D046A321AE2C298440EF218912CA4FB0BCC449E5C98) (reporter) |
 | **Client-side encryption and decryption** | Both happen in the browser tab: sealing in the "Send a report" tab, opening in the "Inbox" tab with a seal-key file held in memory only (`openDrop` in [`src/core/inbox.ts`](src/core/inbox.ts)). No server ever sees plain text: the only server code is a GET-only gateway for two key queries ([`gateway.mjs`](gateway.mjs), [`worker/index.mjs`](worker/index.mjs), tests in [`test/gateway.test.mjs`](test/gateway.test.mjs)). Proof run: [`docs/e2e/browser.txt`](docs/e2e/browser.txt) (sealed in the page, dropped, opened in the page) and the screenshots in [`docs/screenshots/`](docs/screenshots) |
 | QoreChain-addressed recipients | Recipients are `qor1…` accounts; the contract derives the bech32 address itself (`qorAddress`) so the signed statements name accounts the way QoreSign shows them |
 | Repo, README, featured image, video <= 3 min, testnet addresses, licence, credits | This repo, [`docs/featured.png`](docs/featured.png), [demo video](https://github.com/apeirs/sealed-disclosure/releases/download/v0.1.0/sealed-disclosure-demo.mp4), the [testnet table](#live-on-qorechain-testnet-diana) below, [LICENSE](LICENSE) (MIT), [Built with](#built-with) |
@@ -65,7 +65,7 @@ first, while anyone who sees the report can send it again under their own name.
 | What | Where |
 | --- | --- |
 | `SealedInbox` contract | [`0x56b6706d009db5357ee076e62c7c7e317e45c353`](https://explore.qore.network/address/0x56b6706d009db5357ee076e62c7c7e317e45c353) (EVM, chain id 9800) |
-| Deploy tx | [`0x859f4c0aedc4e819ad3c4582f7f4793e5ee86cf3eae8caa6b23733c17d70d4ae`](https://explore.qore.network/tx/0x859f4c0aedc4e819ad3c4582f7f4793e5ee86cf3eae8caa6b23733c17d70d4ae) (block 9965775, 1,598,049 gas) |
+| Deploy tx | [`0x859f4c0aedc4e819ad3c4582f7f4793e5ee86cf3eae8caa6b23733c17d70d4ae`](https://explore.qore.network/tx/9CD3639EC1191D4FA3E331EBAA4BBA9F5D40BE642F1FBF505E40EE729F93307A) (block 9965775, 1,598,049 gas) |
 | Demo project | `qor1knxej2kffzpx9hcfjd54argxj72vs962nw60fg` |
 | Demo reporter | `qor1uss0ahjc6kgygjmgamsqrmppnpdvd5u7vrlqa5` |
 | Second reporter (copies drop #0) | `qor1678npj39yjmfeamjeapgju3uxxrtdjzn0gqehw` |
@@ -77,12 +77,12 @@ switch it to Testnet. Native hashes link to the raw transaction on the chain's R
 | --- | --- |
 | Project registers its ML-DSA-87 key | [`C57C78EA4C7E33280A63FCF21003321141964D867C11F174B3A44550654C6160`](https://api-testnet.qore.host/cosmos/tx/v1beta1/txs/C57C78EA4C7E33280A63FCF21003321141964D867C11F174B3A44550654C6160) |
 | Project registers its ML-KEM-1024 key | [`CA2E5552977ADFBFBDE67116BCAADE93B8300E97C249220FE67DDEA2571E5726`](https://api-testnet.qore.host/cosmos/tx/v1beta1/txs/CA2E5552977ADFBFBDE67116BCAADE93B8300E97C249220FE67DDEA2571E5726) |
-| Project publishes its recipient card | [`0x352d7b1176472960105eb552bfb110236fcb0b0322dbaa6701ff6101edf6c4f8`](https://explore.qore.network/tx/0x352d7b1176472960105eb552bfb110236fcb0b0322dbaa6701ff6101edf6c4f8) (block 9965788) |
+| Project publishes its recipient card | [`0x352d7b1176472960105eb552bfb110236fcb0b0322dbaa6701ff6101edf6c4f8`](https://explore.qore.network/tx/7DB65CCC0244793A5F345E9757CC0A13A05DCB1C31EF4FBE4397F78A36226A84) (block 9965788) |
 | Reporter registers its ML-DSA-87 key | [`0398795F70032DBC28310D046A321AE2C298440EF218912CA4FB0BCC449E5C98`](https://api-testnet.qore.host/cosmos/tx/v1beta1/txs/0398795F70032DBC28310D046A321AE2C298440EF218912CA4FB0BCC449E5C98) |
-| Drop #0 (sealed by the CLI) | [`0x915ef838efdaeee4749fa70764dc7385da2f93bebc51b57dedc59dd21c3c1aa4`](https://explore.qore.network/tx/0x915ef838efdaeee4749fa70764dc7385da2f93bebc51b57dedc59dd21c3c1aa4) (2,245 bytes) |
-| Project's signed receipt for #0 | [`0xf1826ed8d2386cd445157546f03fe1b20e3c19660ad1fe133ba313713e00e73a`](https://explore.qore.network/tx/0xf1826ed8d2386cd445157546f03fe1b20e3c19660ad1fe133ba313713e00e73a) (block 9965833) |
-| Drop #1 (the same envelope, dropped by the second reporter) | [`0x5666716a8be51fdca5a8f9b22803561ed403faaf1e0ae89ac9422fad38b2f63e`](https://explore.qore.network/tx/0x5666716a8be51fdca5a8f9b22803561ed403faaf1e0ae89ac9422fad38b2f63e): accepted, but does not open |
-| Drop #2 (sealed in the browser, dropped by the CLI) | [`0x7a4dbef7ad85c22aa6eb760b4fd6389b3b6a496152b07c1dee03ad7464fb2d73`](https://explore.qore.network/tx/0x7a4dbef7ad85c22aa6eb760b4fd6389b3b6a496152b07c1dee03ad7464fb2d73) (2,087 bytes) |
+| Drop #0 (sealed by the CLI) | [`0x915ef838efdaeee4749fa70764dc7385da2f93bebc51b57dedc59dd21c3c1aa4`](https://explore.qore.network/tx/3D1D8822675995288037DC989573A9D1CCDAF0B641E4D5F38F9F08EFD3D3219E) (2,245 bytes) |
+| Project's signed receipt for #0 | [`0xf1826ed8d2386cd445157546f03fe1b20e3c19660ad1fe133ba313713e00e73a`](https://explore.qore.network/tx/D387C5EB584DE2E5AF427CC503696AEF11383A47830ACE3C3FCCEE19EAE56BF0) (block 9965833) |
+| Drop #1 (the same envelope, dropped by the second reporter) | [`0x5666716a8be51fdca5a8f9b22803561ed403faaf1e0ae89ac9422fad38b2f63e`](https://explore.qore.network/tx/3D85BDB0CA1A6B4C15C4D2DC9F3478FE4F4511626F9C977D65F96435B3E973F5): accepted, but does not open |
+| Drop #2 (sealed in the browser, dropped by the CLI) | [`0x7a4dbef7ad85c22aa6eb760b4fd6389b3b6a496152b07c1dee03ad7464fb2d73`](https://explore.qore.network/tx/19FA4B0E6DDED35648D6D3DBDB4AD9FD6381732F494D9230FC2FE6038B752375) (2,087 bytes) |
 
 Each EVM write is sent by the account's relayer inside a hybrid-signed EVM window scoped to the inbox, one
 transaction and the estimated fee at most, e.g. [`7E0BE970BB27661FF58FFE61765620D15C0C69E65DD98FA9838F374388C124D2`](https://api-testnet.qore.host/cosmos/tx/v1beta1/txs/7E0BE970BB27661FF58FFE61765620D15C0C69E65DD98FA9838F374388C124D2)
@@ -225,7 +225,7 @@ computers exist; and the record of who reported what, when.
 | --- | --- | --- |
 | Records every envelope today, decrypts later with a quantum computer | Read the envelopes: they are public in the inbox's event logs | Open them: the key exchange is ML-KEM-1024 (combined with X25519, so both have to fall), the content AES-256-GCM |
 | Holds the project's or a reporter's **secp256k1 key** (Q-Day) | Whatever the classical key alone allows on the account | Forge a drop, a receipt or a card: each needs the account's ML-DSA-87 signature, checked on chain against the key registered with proof of possession. Read reports: the seal key comes from the mnemonic through a one-way HKDF, not from the secp256k1 key. Redirect reports to a key of their own: the ML-DSA-signed card names the ML-KEM key, so a sender refuses a registry key the card does not name (test: "a card does not verify against another account's keys"); the worst case is that the project cannot receive until it fixes its keys |
-| Watches the mempool and copies a reporter's envelope | Drop the same bytes under their own name, even in an earlier block (drop [#1](https://explore.qore.network/tx/0x5666716a8be51fdca5a8f9b22803561ed403faaf1e0ae89ac9422fad38b2f63e) does this) | Make the copy open: the envelope's authenticated data names the real sender, so the copy is refused and the genuine drop keeps its place. Block the genuine drop: duplicates are tracked per reporter, not globally |
+| Watches the mempool and copies a reporter's envelope | Drop the same bytes under their own name, even in an earlier block (drop [#1](https://explore.qore.network/tx/3D85BDB0CA1A6B4C15C4D2DC9F3478FE4F4511626F9C977D65F96435B3E973F5) does this) | Make the copy open: the envelope's authenticated data names the real sender, so the copy is refused and the genuine drop keeps its place. Block the genuine drop: duplicates are tracked per reporter, not globally |
 | Relays the transaction, or runs the RPC | Delay or drop the transaction (anyone else can relay the same signed drop) | Change it: the signature covers chain, inbox, both accounts and the envelope's SHA-256 |
 | Replays an old card or signature | Nothing | Cards must be newer than the last (`NotNewer`); statements name the chain and the inbox |
 | Hosts the web page | Serve modified JavaScript, as with any web app | Read anything through the gateway: it forwards two public key queries and nothing else. Reporters who do not trust a host can run the page locally or use the CLI |
@@ -246,7 +246,8 @@ computers exist; and the record of who reported what, when.
   `./deploy.sh` ships none.
 - The demo run's three accounts (project, reporter, second reporter) are ours, with their keys on one machine; drops
   #0 to #2 are example reports about example contracts, not real findings.
-- The demo video is a captioned walkthrough of the real screenshots and command output, not a screen recording.
+- The demo video is a screen recording of the app on a local server, reading the live testnet. Its drop scene replays
+  the recorded 11-12 command-line drop log, so the video itself sends no transaction.
 
 ## Built with
 
