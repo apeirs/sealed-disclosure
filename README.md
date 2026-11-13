@@ -3,6 +3,7 @@
 [![CI](https://github.com/apeirs/sealed-disclosure/actions/workflows/ci.yml/badge.svg)](https://github.com/apeirs/sealed-disclosure/actions/workflows/ci.yml)
 [![QoreChain testnet](https://img.shields.io/badge/QoreChain-testnet%20Diana-3b5bdb)](#live-on-qorechain-testnet-diana)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Built on QoreChain](https://build.qorechain.io/badge/sealed-disclosure.svg)](https://build.qorechain.io/p/sealed-disclosure)
 
 **What:** a vulnerability-report inbox for QoreChain projects. A report is encrypted in the reporter's browser to the
 project's registered ML-KEM-1024 key, dropped into an on-chain inbox that checks the reporter's ML-DSA-87 signature,
